@@ -33,6 +33,10 @@ Pluggable STT/TTS · deterministic slot-filling dialogue · a traced turn pipeli
 - [Repository map](#repository-map)
 - [Roadmap](#roadmap)
 
+> **Full design write-up:** [ARCHITECTURE.md](ARCHITECTURE.md) — the cascade, the
+> three-stage turn pipeline, the slot-filling dialogue state machine, the pluggable
+> backends, and the design decisions behind each, all mapped to the code.
+
 ---
 
 ## Why cascaded
@@ -157,6 +161,7 @@ app/
   main.py      FastAPI: /v1/turns + the console
 scripts/talk.py  interactive terminal client
 tests/           pytest — NLU + full multi-turn pipeline
+ARCHITECTURE.md  the full design write-up, mapped to the code
 ```
 
 ---
