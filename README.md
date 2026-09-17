@@ -103,12 +103,21 @@ and drives the conversation:
 | `time` | "7pm", "7:30 pm" |
 | `party_size` | "for 4", "6 people", "2 guests" |
 | `name` | "name is Priya", "it's Sam" |
+| `special_request` *(optional)* | "a window seat", "birthday", "outdoor" |
 
 The manager asks only for what's still missing, confirms the full booking, then
 commits it to the store — and folds in any slots it hears at **any** point, so
-"a table for 4 tomorrow at 8pm, name's Sam" jumps straight to confirmation. NLU
-(intent + slots) is rule-based and dependency-free, behind two functions
-(`detect_intent`, `extract_slots`) you can swap for an LLM.
+"a table for 4 tomorrow at 8pm, name's Sam" jumps straight to confirmation.
+
+Beyond booking, it also handles:
+
+- **lookup** — "look up my booking VB-0001" → reads the reservation back.
+- **modify** — "change it to 9pm" (even at the confirmation step) → folds in the
+  new value and re-confirms.
+
+NLU (intent + slots) is rule-based and dependency-free, behind two functions
+(`detect_intent`, `extract_slots`) you can swap for an LLM. Intents are ordered
+so specific ones (lookup, modify) win over the general `book_table`.
 
 ---
 
@@ -171,7 +180,8 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [ ] Live microphone capture + barge-in (interrupt the agent mid-sentence)
 - [ ] Streaming STT and streaming TTS for lower latency
 - [ ] LLM-backed NLU wired on by default behind a local model
-- [ ] Persist bookings in SQLite; add a modify/lookup intent
+- [x] Lookup + modify intents and an optional `special_request` slot
+- [ ] Persist bookings in SQLite
 - [ ] Per-stage latency budget shown in the console
 
 ---

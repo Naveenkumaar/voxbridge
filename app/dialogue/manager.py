@@ -1,9 +1,10 @@
 """Slot-filling dialogue manager.
 
 Owns the conversation policy: track which booking slots are still missing, ask
-for the next one, confirm, then commit. Pure and deterministic — given a state
-and an utterance it returns the next state and the words to speak. That makes
-the whole conversation testable without audio or an LLM.
+for the next one, confirm, then commit — plus look up and modify existing
+bookings. Pure and deterministic — given a state and an utterance it returns the
+next state and the words to speak, so the whole conversation is testable without
+audio or an LLM.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from dataclasses import dataclass, field
 from app.booking import BookingStore
 from app.dialogue.nlu import detect_intent, extract_slots
 
-REQUIRED = ["date", "time", "party_size", "name"]
+REQUIRED = ["date", "time", "party_size", "name"]   # 'special_request' is optional
 
 _PROMPTS = {
     "date": "What day would you like to book for?",
@@ -50,31 +51,42 @@ class DialogueManager:
             state.stage = "cancelled"
             return Reply("No problem — I've cancelled that. Anything else?", state)
 
-        # Always fold any slots we can hear, at any stage.
-        state.slots.update(extract_slots(text))
+        heard = extract_slots(text)
+        ref = heard.pop("ref", None)
+
+        if intent == "lookup":
+            return self._lookup(ref or state.booking_ref, state)
+
+        # Fold any booking slots we heard, at any stage.
+        state.slots.update(heard)
+
+        if intent == "modify":
+            return self._modify(state)
 
         if state.stage == "confirming":
+            # New info at confirmation (not a yes/no) → fold it in and re-confirm.
+            if intent not in ("affirm", "deny") and heard:
+                return self._modify(state)
             return self._confirm(intent, state)
 
         if intent == "greet" and not state.slots:
-            return Reply(
-                "Hi! I can book you a table. " + _PROMPTS["date"], state
-            )
+            return Reply("Hi! I can book you a table. " + _PROMPTS["date"], state)
 
         return self._collect(state)
 
     # ------------------------------------------------------------------
+    def _confirm_text(self, state: DialogueState) -> str:
+        s = state.slots
+        extra = f", {s['special_request']}" if s.get("special_request") else ""
+        return (f"Let me confirm: a table for {s['party_size']} under {s['name']}, "
+                f"{s['date']} at {s['time']}{extra}. Shall I book it?")
+
     def _collect(self, state: DialogueState) -> Reply:
         missing = state.missing()
         if missing:
             return Reply(_PROMPTS[missing[0]], state)
         state.stage = "confirming"
-        s = state.slots
-        return Reply(
-            f"Let me confirm: a table for {s['party_size']} under {s['name']}, "
-            f"{s['date']} at {s['time']}. Shall I book it?",
-            state,
-        )
+        return Reply(self._confirm_text(state), state)
 
     def _confirm(self, intent: str, state: DialogueState) -> Reply:
         if intent == "deny":
@@ -85,9 +97,34 @@ class DialogueManager:
             state.stage = "done"
             state.booking_ref = ref
             s = state.slots
+            extra = f", {s['special_request']}" if s.get("special_request") else ""
             return Reply(
-                f"Booked! Table for {s['party_size']}, {s['date']} at {s['time']}. "
+                f"Booked! Table for {s['party_size']}, {s['date']} at {s['time']}{extra}. "
                 f"Your confirmation is {ref}. See you then!",
                 state,
             )
         return Reply("Sorry, was that a yes or a no?", state)
+
+    def _modify(self, state: DialogueState) -> Reply:
+        """User wants to change something (a slot was likely just folded in).
+        Re-confirm if the booking is complete, else ask for what's still missing.
+        """
+        missing = state.missing()
+        if missing:
+            state.stage = "collecting"
+            return Reply("Sure — " + _PROMPTS[missing[0]], state)
+        state.stage = "confirming"
+        return Reply("Sure, I've updated that. " + self._confirm_text(state), state)
+
+    def _lookup(self, ref: str | None, state: DialogueState) -> Reply:
+        if not ref:
+            return Reply("Sure — what's your booking reference? It looks like VB-0001.", state)
+        b = self.store.get(ref)
+        if not b:
+            return Reply(f"I couldn't find a booking under {ref}.", state)
+        extra = f", {b['special_request']}" if b.get("special_request") else ""
+        return Reply(
+            f"Found {ref}: a table for {b['party_size']} under {b['name']}, "
+            f"{b['date']} at {b['time']}{extra}.",
+            state,
+        )

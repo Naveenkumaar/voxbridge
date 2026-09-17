@@ -92,8 +92,19 @@ which is what makes the whole conversation unit-testable.
 ```
 
 - **collecting** — ask only for the *next missing* slot; fold in any slots heard at any point (so "a table for 4 tomorrow at 8pm, name's Sam" jumps straight to confirmation).
-- **confirming** — read the whole booking back; `affirm` commits it to the [`BookingStore`](app/booking/store.py) and returns a confirmation ref, `deny` returns to collecting.
+- **confirming** — read the whole booking back; `affirm` commits it to the [`BookingStore`](app/booking/store.py) and returns a confirmation ref, `deny` returns to collecting. New info here (e.g. a `special_request`, or "make it 9pm") is folded in and **re-confirmed** rather than treated as a yes/no.
 - **cancelled** — `cancel` at any point ends the flow cleanly.
+
+Two intents work outside the booking flow, handled before the stage logic in
+`handle()`:
+
+- **lookup** — resolve a `VB-####` reference and read the reservation back
+  (`_lookup`).
+- **modify** — fold the changed slot(s) in and re-confirm, or ask for what's
+  still missing (`_modify`).
+
+There's also an optional **`special_request`** slot (window seat, birthday, …)
+that isn't required to book but appears in the confirmation and the booking.
 
 ---
 
@@ -206,12 +217,16 @@ The design came out of concrete problems. This is the record of them.
 | **State bled between calls** | Slots from one booking leaked into the next. | `SessionStore` keys state by `session_id` and the API **resets** it once a booking is `done`/`cancelled`. |
 | **No way to see why the bot said something** | Debugging a wrong reply was guesswork. | `run_turn` emits a per-stage `trace` (stt → dialogue → tts) with the slot state at each step; the console shows it. |
 | **User changes their mind at confirmation** | "no" left the flow stuck. | `_confirm` routes `deny` back to `collecting` and `cancel` to `cancelled` from any stage. |
+| **New info at confirmation read as yes/no** | "actually, a window seat" got "was that a yes or a no?". | In `handle()`, non-yes/no input carrying slots at `confirming` routes to `_modify` — fold it in and re-confirm. |
+| **"find my reservation" mis-parsed as a new booking** | "reservation"/"table" matched `book_table`. | Intent order puts `lookup`/`modify` before `book_table`; first match wins. |
 
 ---
 
 ## What this is capable of
 
 - **Full multi-turn booking** — greet → collect (date · time · party_size · name) → confirm → commit, with a confirmation reference.
+- **Look up & modify** — read back a booking by its `VB-####` reference; change a slot (even at confirmation) and re-confirm.
+- **Optional extras** — a `special_request` slot (window seat, birthday, …) carried through to the confirmation and booking.
 - **One-shot understanding** — fills every slot it hears in a single utterance and skips ahead.
 - **Deterministic & testable** — the entire dialogue runs without audio or a model; the test suite books real tables over text.
 - **Swappable speech + understanding** — text stubs by default; opt into faster-whisper (STT), pyttsx3 (TTS), or a local LLM for NLU via env vars.
