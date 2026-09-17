@@ -181,7 +181,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [ ] Streaming STT and streaming TTS for lower latency
 - [ ] LLM-backed NLU wired on by default behind a local model
 - [x] Lookup + modify intents and an optional `special_request` slot
-- [ ] Persist bookings in SQLite
+- [x] Persist bookings in SQLite (`VOXBRIDGE_DB=bookings.db`) — survives restart
 - [ ] Per-stage latency budget shown in the console
 
 ---

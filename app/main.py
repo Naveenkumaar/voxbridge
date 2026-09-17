@@ -11,11 +11,14 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from app.booking import get_booking_store
+from app.dialogue.manager import DialogueManager
 from app.pipeline import VoicePipeline
 from app.state import SessionStore
 
 app = FastAPI(title="voxbridge", version="0.1.0")
-pipeline = VoicePipeline()
+# Persist bookings if VOXBRIDGE_DB is set (else in-memory) — same interface either way.
+pipeline = VoicePipeline(DialogueManager(get_booking_store()))
 sessions = SessionStore()
 
 CONSOLE = Path(__file__).parent / "ui" / "console.html"

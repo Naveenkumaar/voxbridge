@@ -132,6 +132,12 @@ Every stage resolves its backend from an env var; the pipeline never changes:
 | STT | text passthrough | `faster-whisper` | `STT_BACKEND=whisper` |
 | TTS | returns the words | `pyttsx3` (WAV) | `TTS_BACKEND=pyttsx3` |
 | NLU | rule-based | Ollama (local) | use `llm_nlu` |
+| Booking store | in-memory | SQLite (stdlib) | `VOXBRIDGE_DB=bookings.db` |
+
+The booking store is behind the same `create` / `get` / `all` interface either
+way ([`app/booking/`](app/booking/)), so the dialogue manager never changes; with
+`VOXBRIDGE_DB` set, bookings persist across restarts and a `lookup` resolves a
+reference created in an earlier run.
 
 ---
 

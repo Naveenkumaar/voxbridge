@@ -8,3 +8,4 @@ venv/
 *.wav
 *.zip
 .DS_Store
+*.db
