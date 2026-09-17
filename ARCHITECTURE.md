@@ -11,6 +11,9 @@ you can open. If you change the code, change this doc in the same commit.
 - [NLU: intent + slots](#nlu-intent--slots)
 - [Pluggable backends](#pluggable-backends)
 - [Design decisions](#design-decisions)
+- [Code-level flow](#code-level-flow)
+- [Problems faced & how I fixed them](#problems-faced--how-i-fixed-them)
+- [What this is capable of](#what-this-is-capable-of)
 - [Extending it](#extending-it)
 
 ---
@@ -144,6 +147,77 @@ The choices that shape everything above, and why:
 
 5. **Every turn is traced.** `run_turn` emits a per-stage trace by construction,
    so any spoken reply can be reconstructed from `stt` to `tts`.
+
+---
+
+## Code-level flow
+
+Follow one `POST /v1/turns` request through the code, function by function. Every
+step names the file so you can open it and read along.
+
+```
+app/main.py : turn(req)                        ← HTTP entry
+  │  state = sessions.get(req.session_id)       app/state/sessions.py
+  ▼
+app/pipeline.py : VoicePipeline.run_turn(text, state)
+  │
+  ├─ 1 STT     self.stt.transcribe(text_or_audio)     app/stt/
+  │              TextSTT (default) → Transcript(text)  |  WhisperSTT (real audio)
+  │              trace.append({"stage": "stt", ...})
+  │
+  ├─ 2 dialogue  self.manager.handle(transcript.text, state)
+  │              app/dialogue/manager.py : DialogueManager.handle()
+  │                 intent = detect_intent(text)        app/dialogue/nlu.py
+  │                 if intent == "cancel": state.stage = "cancelled"; return
+  │                 state.slots.update(extract_slots(text))   ← fold in any heard slots
+  │                 if state.stage == "confirming": return self._confirm(intent, state)
+  │                 return self._collect(state)
+  │                     _collect: ask for state.missing()[0]  (date/time/party_size/name)
+  │                              → when none missing: stage = "confirming", read back
+  │                     _confirm: affirm → store.create(slots) → stage = "done" + ref
+  │                               deny   → stage = "collecting"
+  │                                        app/booking/store.py : BookingStore.create()
+  │              trace.append({"stage": "dialogue", slots, next_stage, missing})
+  │
+  └─ 3 TTS     self.tts.synthesize(reply.text)         app/tts/
+                 TextTTS (default) → Speech(text)  |  Pyttsx3TTS → Speech(audio_path)
+                 trace.append({"stage": "tts", ...})
+  ▼
+app/main.py : sessions.set(session_id, new_state)
+              if new_state.stage in ("done","cancelled"): sessions.reset(session_id)
+              return { reply, stage, booking_ref, trace }
+```
+
+The whole `dialogue` stage is pure text over a `DialogueState` — no audio, no
+model — which is why the tests can drive a full multi-turn booking end to end.
+
+---
+
+## Problems faced & how I fixed them
+
+The design came out of concrete problems. This is the record of them.
+
+| Problem | Symptom | Fix (in the code) |
+|--------|---------|-------------------|
+| **Couldn't test the conversation without audio** | Logic was tangled with STT/TTS, so tests needed a mic. | The dialogue policy is a **pure state machine over text** (`DialogueManager`); STT/TTS sit outside it. Tests drive real bookings with plain strings. |
+| **Caller volunteers everything at once** | "table for 4 tomorrow at 8pm, name's Sam" broke a rigid one-slot-at-a-time flow. | `handle()` calls `extract_slots` on **every** turn and folds results in, so a fully-specified request jumps straight to `confirming`. |
+| **Model/vendor lock-in for understanding** | Intent logic was hard-wired to one model. | NLU is two functions (`detect_intent`, `extract_slots`); rules today, `llm_nlu.py` (local Ollama) tomorrow — the manager never changes. |
+| **A flaky STT/TTS backend could crash a call** | A speech-model error killed the turn. | Backends are swappable behind tiny interfaces and default to offline stubs; the pipeline degrades to text instead of crashing. |
+| **State bled between calls** | Slots from one booking leaked into the next. | `SessionStore` keys state by `session_id` and the API **resets** it once a booking is `done`/`cancelled`. |
+| **No way to see why the bot said something** | Debugging a wrong reply was guesswork. | `run_turn` emits a per-stage `trace` (stt → dialogue → tts) with the slot state at each step; the console shows it. |
+| **User changes their mind at confirmation** | "no" left the flow stuck. | `_confirm` routes `deny` back to `collecting` and `cancel` to `cancelled` from any stage. |
+
+---
+
+## What this is capable of
+
+- **Full multi-turn booking** — greet → collect (date · time · party_size · name) → confirm → commit, with a confirmation reference.
+- **One-shot understanding** — fills every slot it hears in a single utterance and skips ahead.
+- **Deterministic & testable** — the entire dialogue runs without audio or a model; the test suite books real tables over text.
+- **Swappable speech + understanding** — text stubs by default; opt into faster-whisper (STT), pyttsx3 (TTS), or a local LLM for NLU via env vars.
+- **Traceable turns** — per-stage trace (transcript, slots, next state, spoken words) for every turn.
+- **Cancel / correct any time** — cancel from any stage; deny at confirmation returns to collecting.
+- **Runs offline** — no keys, no network, no microphone required to demo the whole flow.
 
 ---
 
