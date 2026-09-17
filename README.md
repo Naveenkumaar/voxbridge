@@ -188,7 +188,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 ## Roadmap
 
 - [x] Live microphone capture (`scripts/listen.py` — record → STT → turn → speak)
-- [ ] Barge-in (interrupt the agent mid-sentence)
+- [x] Barge-in — stop speaking the moment the caller starts talking (`app/audio/barge.py`)
 - [ ] Streaming STT and streaming TTS for lower latency
 - [ ] LLM-backed NLU wired on by default behind a local model
 - [x] Lookup + modify intents and an optional `special_request` slot

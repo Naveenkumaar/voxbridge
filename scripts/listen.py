@@ -18,8 +18,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.audio import is_silent, record_wav  # noqa: E402
+from app.audio import chunk_text, is_silent, record_wav, speak_interruptible  # noqa: E402
 from app.pipeline import VoicePipeline  # noqa: E402
+
+
+def _mic_has_voice() -> bool:
+    """Barge-in signal: did the mic just hear speech? Best-effort — needs real
+    duplex audio; returns False if capture isn't available so speech isn't cut off."""
+    try:
+        return not is_silent(_wav_samples(record_wav(seconds=0.4)))
+    except Exception:
+        return False
 
 
 def _wav_samples(path: str) -> list[int]:
@@ -58,6 +67,13 @@ def main() -> int:
 
         result, state = pipeline.run_turn(wav, state)   # STT → dialogue → TTS
         print(f"you › {result.transcript}")
+        # speak the reply, but stop the moment the caller starts talking (barge-in)
+        spoken, interrupted = speak_interruptible(
+            chunk_text(result.reply), _mic_has_voice, on_chunk=lambda c: print(c, end="", flush=True))
+        print()
+        if interrupted:
+            print("(interrupted — listening…)")
+            continue
         print(f"bot › {result.reply}")
         if result.transcript.strip().lower() in {"quit", "exit", "stop"}:
             break

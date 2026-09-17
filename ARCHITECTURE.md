@@ -239,6 +239,7 @@ The design came out of concrete problems. This is the record of them.
 - **Traceable turns** — per-stage trace (transcript, slots, next state, spoken words) for every turn.
 - **Cancel / correct any time** — cancel from any stage; deny at confirmation returns to collecting.
 - **Live microphone** — `scripts/listen.py` records from the mic (`app/audio/`), transcribes, runs a turn, and speaks the reply; silence is trimmed and ends the loop.
+- **Barge-in** — the reply is spoken chunk-by-chunk via `speak_interruptible` (`app/audio/barge.py`) and halts the instant the caller starts talking, returning what was actually spoken so the loop can process the new input.
 - **Runs offline** — no keys, no network, no microphone required to demo the whole flow (text stubs).
 
 ---
