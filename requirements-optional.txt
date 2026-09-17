@@ -3,3 +3,4 @@ faster-whisper>=1.0     # real speech-to-text
 pyttsx3>=2.90           # offline text-to-speech
 sounddevice>=0.4        # microphone / speaker capture
 httpx>=0.27             # only needed for the optional Ollama dialogue backend
+numpy>=1.23        # mic recording buffer

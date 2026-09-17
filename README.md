@@ -154,6 +154,16 @@ export TTS_BACKEND=pyttsx3      # offline speech synthesis to a WAV
 
 Each stage resolves its backend from an env var; no engine code changes.
 
+**Talk to it with your microphone** (needs the optional deps + a mic):
+
+```bash
+STT_BACKEND=whisper TTS_BACKEND=pyttsx3 python scripts/listen.py
+```
+
+`scripts/listen.py` records from the mic, transcribes, runs the pipeline, and
+speaks the reply each round (`app/audio/` handles capture; silent input is
+trimmed and stops the loop). No mic? `scripts/talk.py` is the offline text demo.
+
 ---
 
 ## Repository map
@@ -177,7 +187,8 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 
 ## Roadmap
 
-- [ ] Live microphone capture + barge-in (interrupt the agent mid-sentence)
+- [x] Live microphone capture (`scripts/listen.py` — record → STT → turn → speak)
+- [ ] Barge-in (interrupt the agent mid-sentence)
 - [ ] Streaming STT and streaming TTS for lower latency
 - [ ] LLM-backed NLU wired on by default behind a local model
 - [x] Lookup + modify intents and an optional `special_request` slot
