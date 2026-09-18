@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from app.booking import BookingStore
-from app.dialogue.nlu import detect_intent, extract_slots
+from app.dialogue.nlu_router import detect_intent, extract_slots
 
 REQUIRED = ["date", "time", "party_size", "name"]   # 'special_request' is optional
 

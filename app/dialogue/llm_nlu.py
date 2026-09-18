@@ -10,10 +10,11 @@ import json
 import os
 
 _SYSTEM = (
-    "You extract a booking intent and slots from a diner's message. "
+    "You extract a restaurant intent and slots from a diner's message. "
     "Reply ONLY with JSON: {\"intent\": one of "
-    "[book_table,cancel,greet,affirm,deny,unknown], "
-    "\"slots\": {date?,time?,party_size?,name?}}."
+    "[cancel,lookup,modify,list,faq,book_table,greet,affirm,deny,unknown], "
+    "\"slots\": {date?,time?,party_size?,name?,ref?,special_request?}}. "
+    "Use the same slot names and keep values short."
 )
 
 

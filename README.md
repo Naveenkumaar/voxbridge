@@ -156,10 +156,14 @@ pip install -r requirements-optional.txt
 
 export STT_BACKEND=whisper      # faster-whisper transcribes real audio files
 export TTS_BACKEND=pyttsx3      # offline speech synthesis to a WAV
-# LLM-backed NLU (see app/dialogue/llm_nlu.py) via a local Ollama model
+export NLU_BACKEND=llm          # LLM intent+slot extraction via a local Ollama model
 ```
 
-Each stage resolves its backend from an env var; no engine code changes.
+Each stage resolves its backend from an env var; no engine code changes. The
+manager talks to NLU only through `app/dialogue/nlu_router.py`, so `NLU_BACKEND`
+switches between the deterministic rule-based NLU (default) and a local LLM —
+and the LLM path **falls back to the rules per call** on any error, so nothing
+breaks with no model and no network.
 
 **Talk to it with your microphone** (needs the optional deps + a mic):
 
@@ -179,7 +183,7 @@ trimmed and stops the loop). No mic? `scripts/talk.py` is the offline text demo.
 app/
   stt/         speech-to-text — text stub (default) · faster-whisper (optional)
   tts/         text-to-speech — text stub (default) · pyttsx3 (optional)
-  dialogue/    nlu (rule-based) · manager (slot-filling policy) · llm_nlu (optional)
+  dialogue/    nlu (rule-based) · nlu_router (backend resolver) · manager (slot-filling policy) · llm_nlu (optional)
   booking/     the domain action — an in-memory reservation store
   state/       per-session dialogue state
   pipeline.py  the cascaded STT -> dialogue -> TTS orchestrator (traced)
@@ -197,7 +201,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [x] Live microphone capture (`scripts/listen.py` — record → STT → turn → speak)
 - [x] Barge-in — stop speaking the moment the caller starts talking (`app/audio/barge.py`)
 - [ ] Streaming STT and streaming TTS for lower latency
-- [ ] LLM-backed NLU wired on by default behind a local model
+- [x] LLM-backed NLU selectable via `NLU_BACKEND=llm` (local Ollama), with the rule-based NLU as a per-call fallback
 - [x] Lookup + modify intents and an optional `special_request` slot
 - [x] Persist bookings in SQLite (`VOXBRIDGE_DB=bookings.db`) — survives restart
 - [ ] Per-stage latency budget shown in the console

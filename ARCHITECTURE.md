@@ -114,12 +114,15 @@ Rule-based and dependency-free ([`app/dialogue/nlu.py`](app/dialogue/nlu.py)),
 behind two functions so they can be swapped for an LLM without touching the
 manager:
 
-- `detect_intent(text)` → `book_table` · `cancel` · `greet` · `affirm` · `deny` · `unknown`.
-- `extract_slots(text)` → any of `date` / `time` / `party_size` / `name` it can find (time like "7:30 pm", party like "for 4" / "6 people", a capitalized name after "name is …", a weekday/"tomorrow").
+- `detect_intent(text)` → `cancel` · `lookup` · `modify` · `list` · `faq` · `book_table` · `greet` · `affirm` · `deny` · `unknown`.
+- `extract_slots(text)` → any of `date` / `time` / `party_size` / `name` / `ref` / `special_request` it can find (time like "7:30 pm", party like "for 4" / "6 people", a capitalized name after "name is …", a weekday/"tomorrow", a `VB-0001` reference).
 
-An optional LLM-backed NLU ([`app/dialogue/llm_nlu.py`](app/dialogue/llm_nlu.py))
-implements the same two functions against a local Ollama model and falls back to
-the rules on any error.
+The manager never imports a backend directly — it goes through
+[`app/dialogue/nlu_router.py`](app/dialogue/nlu_router.py), which resolves the
+NLU backend from `NLU_BACKEND` **per call**: rule-based by default, or a local
+LLM ([`app/dialogue/llm_nlu.py`](app/dialogue/llm_nlu.py)) with `NLU_BACKEND=llm`.
+The LLM implements the same two functions against Ollama and falls back to the
+rules on any error, so selecting it never breaks the offline demo.
 
 ---
 
@@ -131,7 +134,7 @@ Every stage resolves its backend from an env var; the pipeline never changes:
 |-------|-------------------|--------------|--------|
 | STT | text passthrough | `faster-whisper` | `STT_BACKEND=whisper` |
 | TTS | returns the words | `pyttsx3` (WAV) | `TTS_BACKEND=pyttsx3` |
-| NLU | rule-based | Ollama (local) | use `llm_nlu` |
+| NLU | rule-based | Ollama (local) | `NLU_BACKEND=llm` (rule fallback per call) |
 | Booking store | in-memory | SQLite (stdlib) | `VOXBRIDGE_DB=bookings.db` |
 
 The booking store is behind the same `create` / `get` / `all` interface either
