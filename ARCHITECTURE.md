@@ -233,6 +233,7 @@ The design came out of concrete problems. This is the record of them.
 - **Full multi-turn booking** — greet → collect (date · time · party_size · name) → confirm → commit, with a confirmation reference.
 - **Look up, list & modify** — read back one booking by its `VB-####` reference, list them all, or change a slot (even at confirmation) and re-confirm; a reference always routes to lookup over list.
 - **Multi-booking sessions** — after a booking completes, a new request starts a fresh reservation in the same session (the store persists all of them).
+- **Autonomous capability routing** — the agent answers a small **FAQ** (hours / location / parking / contact / menu) or drives the booking flow, deciding between them from the intent on its own; an FAQ asked mid-booking is answered without losing slot progress (`_faq` in `app/dialogue/manager.py`).
 - **Optional extras** — a `special_request` slot (window seat, birthday, …) carried through to the confirmation and booking.
 - **One-shot understanding** — fills every slot it hears in a single utterance and skips ahead.
 - **Deterministic & testable** — the entire dialogue runs without audio or a model; the test suite books real tables over text.

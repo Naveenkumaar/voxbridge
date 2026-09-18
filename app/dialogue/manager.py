@@ -15,6 +15,22 @@ from app.dialogue.nlu import detect_intent, extract_slots
 
 REQUIRED = ["date", "time", "party_size", "name"]   # 'special_request' is optional
 
+# Small FAQ capability — the agent autonomously answers these instead of booking.
+_FAQ = {
+    "hours": ("hour", "open", "opening", "closing", "timing"),
+    "location": ("where", "located", "location", "address"),
+    "parking": ("parking", "car park"),
+    "contact": ("phone", "contact", "number"),
+    "menu": ("menu", "dress code"),
+}
+_FAQ_ANSWERS = {
+    "hours": "We're open every day from 12pm to 11pm.",
+    "location": "We're at 12 Riverside Walk, just past the old bridge.",
+    "parking": "There's street parking nearby and a car park two minutes away.",
+    "contact": "You can reach us on 555-0100.",
+    "menu": "Smart-casual is fine, and the menu's on our website.",
+}
+
 _PROMPTS = {
     "date": "What day would you like to book for?",
     "time": "What time works for you?",
@@ -58,6 +74,8 @@ class DialogueManager:
             return self._list(state)
         if intent == "lookup" or ref:                 # a reference always means "look it up"
             return self._lookup(ref or state.booking_ref, state)
+        if intent == "faq":                           # answer a general question, keep booking state
+            return self._faq(text, state)
 
         # After a finished booking, a new request starts a fresh one (store persists).
         if state.stage in ("done", "cancelled"):
@@ -121,6 +139,14 @@ class DialogueManager:
             return Reply("Sure — " + _PROMPTS[missing[0]], state)
         state.stage = "confirming"
         return Reply("Sure, I've updated that. " + self._confirm_text(state), state)
+
+    def _faq(self, text: str, state: DialogueState) -> Reply:
+        low = text.lower()
+        for topic, keywords in _FAQ.items():
+            if any(k in low for k in keywords):
+                return Reply(_FAQ_ANSWERS[topic], state)
+        return Reply("I can help with bookings, hours, location, and parking — "
+                     "what would you like?", state)
 
     def _list(self, state: DialogueState) -> Reply:
         bookings = self.store.all()

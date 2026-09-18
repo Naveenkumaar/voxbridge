@@ -114,6 +114,9 @@ Beyond booking, it also handles:
 - **lookup** — "look up my booking VB-0001" → reads the reservation back.
 - **modify** — "change it to 9pm" (even at the confirmation step) → folds in the
   new value and re-confirms.
+- **FAQ routing** — "what are your hours?" / "where are you?" / "is there
+  parking?" are answered directly; the agent decides between answering and
+  booking on its own, and a question *mid-booking* preserves the progress.
 - **list** — "show all my bookings" → lists every reservation in the store.
 - **multi-booking** — after one booking completes, "book another…" starts a
   fresh reservation in the same session (a reference always routes to lookup, so
