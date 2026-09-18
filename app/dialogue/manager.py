@@ -54,8 +54,14 @@ class DialogueManager:
         heard = extract_slots(text)
         ref = heard.pop("ref", None)
 
-        if intent == "lookup":
+        if intent == "list" and not ref:
+            return self._list(state)
+        if intent == "lookup" or ref:                 # a reference always means "look it up"
             return self._lookup(ref or state.booking_ref, state)
+
+        # After a finished booking, a new request starts a fresh one (store persists).
+        if state.stage in ("done", "cancelled"):
+            state = DialogueState()
 
         # Fold any booking slots we heard, at any stage.
         state.slots.update(heard)
@@ -115,6 +121,14 @@ class DialogueManager:
             return Reply("Sure — " + _PROMPTS[missing[0]], state)
         state.stage = "confirming"
         return Reply("Sure, I've updated that. " + self._confirm_text(state), state)
+
+    def _list(self, state: DialogueState) -> Reply:
+        bookings = self.store.all()
+        if not bookings:
+            return Reply("You don't have any bookings yet.", state)
+        parts = [f"{ref} — {b['party_size']} on {b['date']} at {b['time']} ({b['name']})"
+                 for ref, b in bookings.items()]
+        return Reply("Your bookings: " + "; ".join(parts) + ".", state)
 
     def _lookup(self, ref: str | None, state: DialogueState) -> Reply:
         if not ref:

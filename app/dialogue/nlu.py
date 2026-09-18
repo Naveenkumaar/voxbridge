@@ -19,6 +19,8 @@ INTENTS = {
                r"\bwhat('?s| is)\b.*\b(booking|reservation)\b"],
     "modify": [r"\bchange\b", r"\bmodify\b", r"\bupdate\b", r"\binstead\b",
                r"\bmake it\b", r"\bmove it\b"],
+    "list": [r"\b(list|show|see|all)\b.*\b(bookings?|reservations?)\b",
+             r"\bmy (bookings?|reservations?)\b"],
     "book_table": [r"\bbook\b", r"\breserv", r"\btable\b", r"\bget a table\b"],
     "greet": [r"\bhi\b", r"\bhello\b", r"\bhey\b", r"good (morning|evening|afternoon)"],
     "affirm": [r"\byes\b", r"\byep\b", r"\byeah\b", r"\bcorrect\b", r"\bthat'?s right\b"],
