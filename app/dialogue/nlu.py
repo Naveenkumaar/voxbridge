@@ -37,8 +37,32 @@ _REF = re.compile(r"\bVB[-\s]?(\d{1,4})\b", re.IGNORECASE)
 _SPECIAL = re.compile(
     r"\b(window seat|outdoor|patio|booth|birthday|anniversary|high ?chair|"
     r"wheelchair(?: access)?|quiet table)\b", re.IGNORECASE)
-_DAYS = ["today", "tonight", "tomorrow", "monday", "tuesday", "wednesday",
-         "thursday", "friday", "saturday", "sunday"]
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday",
+             "saturday", "sunday"]
+_DAYS = ["today", "tonight", "tomorrow"] + _WEEKDAYS
+
+# spoken clock phrasings — voice transcripts say these far more than "7:30 pm"
+_NUM_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+              "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
+_HALF = re.compile(r"\bhalf past\s+(\w+)", re.IGNORECASE)
+_QUARTER_PAST = re.compile(r"\bquarter past\s+(\w+)", re.IGNORECASE)
+_QUARTER_TO = re.compile(r"\bquarter to\s+(\w+)", re.IGNORECASE)
+_OCLOCK = re.compile(r"\b(\w+)\s+o'?clock\b", re.IGNORECASE)
+# relative dates
+_NEXT = re.compile(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|"
+                   r"saturday|sunday|week|weekend)\b", re.IGNORECASE)
+_THIS = re.compile(r"\bthis\s+(monday|tuesday|wednesday|thursday|friday|"
+                   r"saturday|sunday|weekend)\b", re.IGNORECASE)
+
+
+def _hour(token: str) -> int | None:
+    """Resolve '7' or 'seven' to an hour, or None if it isn't one."""
+    low = token.lower()
+    if low in _NUM_WORDS:
+        return _NUM_WORDS[low]
+    if low.isdigit() and 1 <= int(low) <= 12:
+        return int(low)
+    return None
 
 
 def detect_intent(text: str) -> str:
@@ -49,12 +73,45 @@ def detect_intent(text: str) -> str:
     return "unknown"
 
 
+def _parse_time(text: str, low: str) -> str | None:
+    """A clock time from '7pm', 'noon', 'half past 7', 'quarter to 8', '7 o'clock'."""
+    if (m := _TIME.search(text)):
+        return f"{int(m.group(1))}:{m.group(2) or '00'} {m.group(3).lower()}"
+    if "noon" in low or "midday" in low:
+        return "12:00 pm"
+    if "midnight" in low:
+        return "12:00 am"
+    if (m := _HALF.search(low)) and (h := _hour(m.group(1))) is not None:
+        return f"{h}:30"
+    if (m := _QUARTER_PAST.search(low)) and (h := _hour(m.group(1))) is not None:
+        return f"{h}:15"
+    if (m := _QUARTER_TO.search(low)) and (h := _hour(m.group(1))) is not None:
+        return f"{(h - 1) or 12}:45"        # "quarter to 8" → 7:45
+    if (m := _OCLOCK.search(low)) and (h := _hour(m.group(1))) is not None:
+        return f"{h}:00"
+    return None
+
+
+def _parse_date(low: str) -> str | None:
+    """A day from 'tomorrow', 'next friday', 'this weekend', 'day after tomorrow'."""
+    if "day after tomorrow" in low:
+        return "day after tomorrow"
+    if (m := _NEXT.search(low)):
+        return f"next {m.group(1).lower()}"
+    if (m := _THIS.search(low)):
+        return f"this {m.group(1).lower()}"
+    for day in _DAYS:
+        if day in low:
+            return day
+    return None
+
+
 def extract_slots(text: str) -> dict[str, str]:
     slots: dict[str, str] = {}
+    low = text.lower()
 
-    if (m := _TIME.search(text)):
-        minute = m.group(2) or "00"
-        slots["time"] = f"{int(m.group(1))}:{minute} {m.group(3).lower()}"
+    if (t := _parse_time(text, low)):
+        slots["time"] = t
 
     party = _PARTY.search(text) or _PARTY_FOR.search(text)
     if party:
@@ -69,10 +126,7 @@ def extract_slots(text: str) -> dict[str, str]:
     if (m := _SPECIAL.search(text)):
         slots["special_request"] = m.group(1).lower()
 
-    low = text.lower()
-    for day in _DAYS:
-        if day in low:
-            slots["date"] = day
-            break
+    if (d := _parse_date(low)):
+        slots["date"] = d
 
     return slots

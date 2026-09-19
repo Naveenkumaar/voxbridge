@@ -99,8 +99,8 @@ and drives the conversation:
 
 | Slot | Example phrasing understood |
 |------|-----------------------------|
-| `date` | "tomorrow", "friday", "tonight" |
-| `time` | "7pm", "7:30 pm" |
+| `date` | "tomorrow", "friday", "tonight", "next friday", "this weekend", "day after tomorrow" |
+| `time` | "7pm", "7:30 pm", "noon", "half past 7", "quarter to 8", "seven o'clock" |
 | `party_size` | "for 4", "6 people", "2 guests" |
 | `name` | "name is Priya", "it's Sam" |
 | `special_request` *(optional)* | "a window seat", "birthday", "outdoor" |
@@ -203,6 +203,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [ ] Streaming STT and streaming TTS for lower latency
 - [x] LLM-backed NLU selectable via `NLU_BACKEND=llm` (local Ollama), with the rule-based NLU as a per-call fallback
 - [x] Lookup + modify intents and an optional `special_request` slot
+- [x] Richer relative date/time parsing ("next friday", "this weekend", "half past 7", "quarter to 8", "noon")
 - [x] Persist bookings in SQLite (`VOXBRIDGE_DB=bookings.db`) — survives restart
 - [ ] Per-stage latency budget shown in the console
 
