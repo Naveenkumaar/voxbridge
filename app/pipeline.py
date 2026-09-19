@@ -16,8 +16,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.dialogue.manager import DialogueManager, DialogueState
+from app.dialogue.nlu_router import detect_intent
 from app.stt import get_stt
 from app.tts import get_tts
+
+# intents decisive enough to act on before the caller finishes (barge to cancel)
+_EARLY_INTENTS = {"cancel"}
 
 
 @dataclass
@@ -71,3 +75,25 @@ class VoicePipeline:
             receipt=reply.state.receipt,
         )
         return result, reply.state
+
+    def run_turn_stream(self, audio_or_text, state: DialogueState | None = None):
+        """Stream interim transcripts, acting early on a decisive intent.
+
+        Yields ``{"type": "partial", ...}`` events as the transcript grows; if a
+        terminal intent (e.g. "cancel") appears mid-utterance the turn settles on
+        that partial immediately. A final ``{"type": "final", "result", "state"}``
+        event carries the completed turn (run through the normal, traced path).
+        """
+        final_text = ""
+        early = False
+        for tr in self.stt.stream(audio_or_text):
+            if tr.partial:
+                intent = detect_intent(tr.text)
+                yield {"type": "partial", "text": tr.text, "intent": intent}
+                if intent in _EARLY_INTENTS:
+                    final_text, early = tr.text, True
+                    break
+            else:
+                final_text = tr.text
+        result, new_state = self.run_turn(final_text, state)
+        yield {"type": "final", "result": result, "state": new_state, "early": early}

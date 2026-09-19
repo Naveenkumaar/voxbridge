@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
+
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.booking import get_booking_store
@@ -50,6 +52,30 @@ def turn(req: TurnRequest) -> dict:
         "total_ms": result.total_ms,
         "receipt": result.receipt,
     }
+
+
+@app.post("/v1/turns/stream")
+def turn_stream(req: TurnRequest) -> StreamingResponse:
+    """Server-sent events: interim transcripts, then the final turn."""
+    state = sessions.get(req.session_id)
+
+    def events():
+        final_state = state
+        for ev in pipeline.run_turn_stream(req.text, state):
+            if ev["type"] == "partial":
+                payload = {"type": "partial", "text": ev["text"], "intent": ev["intent"]}
+            else:
+                r = ev["result"]
+                final_state = ev["state"]
+                payload = {"type": "final", "reply": r.reply, "stage": r.stage,
+                           "booking_ref": r.booking_ref, "receipt": r.receipt,
+                           "total_ms": r.total_ms, "trace": r.trace, "early": ev["early"]}
+            yield f"data: {json.dumps(payload)}\n\n"
+        sessions.set(req.session_id, final_state)
+        if final_state.stage in ("done", "cancelled"):
+            sessions.reset(req.session_id)
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @app.get("/", response_class=HTMLResponse)

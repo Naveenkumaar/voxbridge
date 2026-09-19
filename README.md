@@ -200,7 +200,8 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 
 - [x] Live microphone capture (`scripts/listen.py` — record → STT → turn → speak)
 - [x] Barge-in — stop speaking the moment the caller starts talking (`app/audio/barge.py`)
-- [ ] Streaming STT and streaming TTS for lower latency
+- [x] Streaming **partial transcripts** (`run_turn_stream` + `POST /v1/turns/stream` SSE) — interim results, with early-stop on a terminal intent ("cancel")
+- [ ] Streaming TTS for lower latency
 - [x] LLM-backed NLU selectable via `NLU_BACKEND=llm` (local Ollama), with the rule-based NLU as a per-call fallback
 - [x] Lookup + modify intents and an optional `special_request` slot
 - [x] Richer relative date/time parsing ("next friday", "this weekend", "half past 7", "quarter to 8", "noon")
