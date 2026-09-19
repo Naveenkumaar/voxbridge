@@ -55,8 +55,13 @@ async function send() {
   });
   const data = await res.json();
   bubble('bot', data.reply + (data.booking_ref ? ` <b>(${data.booking_ref})</b>` : ''));
-  document.getElementById('trace').textContent =
-    (data.trace || []).map(s => JSON.stringify(s)).join('\n');
+  const lines = (data.trace || []).map(s => {
+    const ms = (s.ms != null ? s.ms.toFixed(1).padStart(6) + ' ms' : '        ');
+    const rest = Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'stage' && k !== 'ms'));
+    return `${ms}  ${s.stage.padEnd(9)} ${JSON.stringify(rest)}`;
+  });
+  if (data.total_ms != null) lines.push(`${data.total_ms.toFixed(1).padStart(6)} ms  total`);
+  document.getElementById('trace').textContent = lines.join('\n');
 }
 document.getElementById('send').onclick = send;
 document.getElementById('msg').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });

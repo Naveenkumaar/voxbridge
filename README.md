@@ -205,7 +205,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [x] Lookup + modify intents and an optional `special_request` slot
 - [x] Richer relative date/time parsing ("next friday", "this weekend", "half past 7", "quarter to 8", "noon")
 - [x] Persist bookings in SQLite (`VOXBRIDGE_DB=bookings.db`) — survives restart
-- [ ] Per-stage latency budget shown in the console
+- [x] Per-stage latency (`ms`) on every trace entry + an end-to-end `total_ms`, shown in the console
 
 ---
 

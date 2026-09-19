@@ -47,6 +47,7 @@ def turn(req: TurnRequest) -> dict:
         "stage": result.stage,
         "booking_ref": result.booking_ref,
         "trace": result.trace,
+        "total_ms": result.total_ms,
     }
 
 

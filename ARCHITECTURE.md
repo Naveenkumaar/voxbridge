@@ -165,8 +165,10 @@ The choices that shape everything above, and why:
    whole agent runs with no models and no network; a single env var swaps in
    real speech. Nothing about the logic depends on which backend is active.
 
-5. **Every turn is traced.** `run_turn` emits a per-stage trace by construction,
-   so any spoken reply can be reconstructed from `stt` to `tts`.
+5. **Every turn is traced and timed.** `run_turn` emits a per-stage trace by
+   construction — each entry carries its own latency (`ms`), plus an
+   end-to-end `total_ms` — so any spoken reply can be reconstructed from `stt`
+   to `tts` and its cost pinpointed to a stage (shown in the console).
 
 ---
 

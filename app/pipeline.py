@@ -11,6 +11,7 @@ are offline stubs, so the whole cascade runs with no models and no network.
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -27,6 +28,7 @@ class TurnResult:
     booking_ref: str | None
     audio_path: str | None
     trace: list[dict[str, Any]] = field(default_factory=list)
+    total_ms: float = 0.0
 
 
 class VoicePipeline:
@@ -37,23 +39,25 @@ class VoicePipeline:
 
     def run_turn(self, audio_or_text, state: DialogueState | None = None) -> tuple[TurnResult, DialogueState]:
         trace: list[dict[str, Any]] = []
+        last = [time.perf_counter()]   # per-stage timer; ms = time since previous stage
+
+        def timed(stage: str, **detail: Any) -> None:
+            now = time.perf_counter()
+            trace.append({"stage": stage, "ms": round((now - last[0]) * 1000, 2), **detail})
+            last[0] = now
 
         # 1. STT
         transcript = self.stt.transcribe(audio_or_text)
-        trace.append({"stage": "stt", "backend": transcript.backend, "text": transcript.text})
+        timed("stt", backend=transcript.backend, text=transcript.text)
 
         # 2. dialogue
         reply = self.manager.handle(transcript.text, state)
-        trace.append({
-            "stage": "dialogue",
-            "slots": dict(reply.state.slots),
-            "next_stage": reply.state.stage,
-            "missing": reply.state.missing(),
-        })
+        timed("dialogue", slots=dict(reply.state.slots),
+              next_stage=reply.state.stage, missing=reply.state.missing())
 
         # 3. TTS
         speech = self.tts.synthesize(reply.text)
-        trace.append({"stage": "tts", "backend": speech.backend, "audio": bool(speech.audio_path)})
+        timed("tts", backend=speech.backend, audio=bool(speech.audio_path))
 
         result = TurnResult(
             transcript=transcript.text,
@@ -62,5 +66,6 @@ class VoicePipeline:
             booking_ref=reply.state.booking_ref,
             audio_path=speech.audio_path,
             trace=trace,
+            total_ms=round(sum(s["ms"] for s in trace), 2),
         )
         return result, reply.state
