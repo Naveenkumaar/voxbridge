@@ -206,6 +206,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [x] Richer relative date/time parsing ("next friday", "this weekend", "half past 7", "quarter to 8", "noon")
 - [x] Persist bookings in SQLite (`VOXBRIDGE_DB=bookings.db`) — survives restart
 - [x] Per-stage latency (`ms`) on every trace entry + an end-to-end `total_ms`, shown in the console
+- [x] Structured confirmation **receipt** on a completed booking (API `receipt` + console card) for a downstream email/SMS/CRM
 
 ---
 

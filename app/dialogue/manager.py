@@ -44,6 +44,7 @@ class DialogueState:
     slots: dict[str, str] = field(default_factory=dict)
     stage: str = "collecting"  # collecting -> confirming -> done | cancelled
     booking_ref: str | None = None
+    receipt: dict | None = None   # structured record, set once a booking is confirmed
 
     def missing(self) -> list[str]:
         return [s for s in REQUIRED if s not in self.slots]
@@ -120,6 +121,7 @@ class DialogueManager:
             ref = self.store.create(state.slots)
             state.stage = "done"
             state.booking_ref = ref
+            state.receipt = self._receipt(ref, state.slots)
             s = state.slots
             extra = f", {s['special_request']}" if s.get("special_request") else ""
             return Reply(
@@ -128,6 +130,25 @@ class DialogueManager:
                 state,
             )
         return Reply("Sorry, was that a yes or a no?", state)
+
+    @staticmethod
+    def _receipt(ref: str, slots: dict[str, str]) -> dict:
+        """A structured, machine-readable record of the confirmed booking.
+
+        A downstream system (email/SMS/CRM) consumes this instead of parsing the
+        spoken reply. Only the fields that exist are included.
+        """
+        receipt = {
+            "confirmation": ref,
+            "status": "confirmed",
+            "party_size": slots.get("party_size"),
+            "date": slots.get("date"),
+            "time": slots.get("time"),
+            "name": slots.get("name"),
+        }
+        if slots.get("special_request"):
+            receipt["special_request"] = slots["special_request"]
+        return {k: v for k, v in receipt.items() if v is not None}
 
     def _modify(self, state: DialogueState) -> Reply:
         """User wants to change something (a slot was likely just folded in).

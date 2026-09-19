@@ -29,6 +29,7 @@ class TurnResult:
     audio_path: str | None
     trace: list[dict[str, Any]] = field(default_factory=list)
     total_ms: float = 0.0
+    receipt: dict | None = None
 
 
 class VoicePipeline:
@@ -67,5 +68,6 @@ class VoicePipeline:
             audio_path=speech.audio_path,
             trace=trace,
             total_ms=round(sum(s["ms"] for s in trace), 2),
+            receipt=reply.state.receipt,
         )
         return result, reply.state

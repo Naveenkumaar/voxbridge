@@ -23,6 +23,9 @@
   .meta { color:var(--muted); font-size:12px; margin-top:6px; }
   .trace { color:var(--muted); font-size:11px; border-top:1px dashed var(--line); margin-top:10px; padding-top:8px; white-space:pre-wrap; display:none; }
   .toggle { color:var(--accent); cursor:pointer; font-size:12px; }
+  .receipt { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13px; }
+  .receipt .rt { color:var(--accent); font-weight:600; margin-bottom:6px; }
+  .receipt .rk { color:var(--muted); display:inline-block; min-width:96px; }
 </style>
 </head>
 <body>
@@ -55,6 +58,11 @@ async function send() {
   });
   const data = await res.json();
   bubble('bot', data.reply + (data.booking_ref ? ` <b>(${data.booking_ref})</b>` : ''));
+  if (data.receipt) {
+    const rows = Object.entries(data.receipt)
+      .map(([k, v]) => `<div><span class="rk">${k}</span> ${v}</div>`).join('');
+    bubble('bot', `<div class="receipt"><div class="rt">🧾 booking receipt</div>${rows}</div>`);
+  }
   const lines = (data.trace || []).map(s => {
     const ms = (s.ms != null ? s.ms.toFixed(1).padStart(6) + ' ms' : '        ');
     const rest = Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'stage' && k !== 'ms'));
