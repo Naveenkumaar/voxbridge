@@ -6,6 +6,7 @@
 
 Pluggable STT/TTS · deterministic slot-filling dialogue · a traced turn pipeline · runs fully offline.
 
+[![CI](https://github.com/Naveenkumaar/voxbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/Naveenkumaar/voxbridge/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](app/main.py)
 [![Whisper](https://img.shields.io/badge/STT-faster--whisper_(optional)-5A29E4)](app/stt/whisper_stt.py)
@@ -57,6 +58,9 @@ Runs **offline** — the default STT and TTS are text stubs (you type what you'd
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+# ⭐ one-command end-to-end demo (routing, booking + receipt, streaming, modify/cancel)
+.venv/bin/python scripts/demo.py
 
 # talk to it in the terminal
 .venv/bin/python scripts/talk.py
