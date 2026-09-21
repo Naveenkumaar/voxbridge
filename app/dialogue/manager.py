@@ -64,12 +64,17 @@ class DialogueManager:
         state = state or DialogueState()
         intent = detect_intent(text)
 
+        heard = extract_slots(text)
+        ref = heard.pop("ref", None)
+
+        # cancel/modify an existing booking by reference (post-confirmation)
+        if intent == "cancel" and ref:
+            return self._cancel_ref(ref, state)
         if intent == "cancel":
             state.stage = "cancelled"
             return Reply("No problem — I've cancelled that. Anything else?", state)
-
-        heard = extract_slots(text)
-        ref = heard.pop("ref", None)
+        if intent == "modify" and ref:
+            return self._modify_ref(ref, heard, state)
 
         if intent == "list" and not ref:
             return self._list(state)
@@ -161,6 +166,23 @@ class DialogueManager:
         state.stage = "confirming"
         return Reply("Sure, I've updated that. " + self._confirm_text(state), state)
 
+    def _modify_ref(self, ref: str, changes: dict[str, str], state: DialogueState) -> Reply:
+        """Change a stored booking identified by its reference (out of band)."""
+        b = self.store.get(ref)
+        if b is None or b.get("status") == "cancelled":
+            return Reply(f"I couldn't find an active booking under {ref}.", state)
+        if not changes:
+            return Reply(f"Sure — what would you like to change about {ref}?", state)
+        self.store.update(ref, changes)
+        summary = ", ".join(f"{k.replace('_', ' ')} to {v}" for k, v in changes.items())
+        return Reply(f"Done — I've updated {ref}: {summary}.", state)
+
+    def _cancel_ref(self, ref: str, state: DialogueState) -> Reply:
+        """Cancel a stored booking identified by its reference."""
+        if self.store.cancel(ref):
+            return Reply(f"Done — booking {ref} is cancelled. Anything else?", state)
+        return Reply(f"I couldn't find a booking under {ref}.", state)
+
     def _faq(self, text: str, state: DialogueState) -> Reply:
         low = text.lower()
         for topic, keywords in _FAQ.items():
@@ -183,6 +205,8 @@ class DialogueManager:
         b = self.store.get(ref)
         if not b:
             return Reply(f"I couldn't find a booking under {ref}.", state)
+        if b.get("status") == "cancelled":
+            return Reply(f"Booking {ref} was cancelled.", state)
         extra = f", {b['special_request']}" if b.get("special_request") else ""
         return Reply(
             f"Found {ref}: a table for {b['party_size']} under {b['name']}, "

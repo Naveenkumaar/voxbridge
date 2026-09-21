@@ -114,6 +114,9 @@ Beyond booking, it also handles:
 - **lookup** — "look up my booking VB-0001" → reads the reservation back.
 - **modify** — "change it to 9pm" (even at the confirmation step) → folds in the
   new value and re-confirms.
+- **modify / cancel by reference** — "change booking VB-0001 to 9pm" or "cancel
+  booking VB-0002" edits or cancels a *stored* reservation after the fact (a
+  cancel keeps the record, marked cancelled, so a later lookup reports it).
 - **FAQ routing** — "what are your hours?" / "where are you?" / "is there
   parking?" are answered directly; the agent decides between answering and
   booking on its own, and a question *mid-booking* preserves the progress.
@@ -204,6 +207,7 @@ ARCHITECTURE.md  the full design write-up, mapped to the code
 - [x] Streaming **TTS** — the reply is emitted as sentence chunks (`reply_chunk` events) so playback can begin on the first chunk
 - [x] LLM-backed NLU selectable via `NLU_BACKEND=llm` (local Ollama), with the rule-based NLU as a per-call fallback
 - [x] Lookup + modify intents and an optional `special_request` slot
+- [x] Modify / cancel an existing booking by reference (post-confirmation; `store.update` / `store.cancel`)
 - [x] Richer relative date/time parsing ("next friday", "this weekend", "half past 7", "quarter to 8", "noon")
 - [x] Persist bookings in SQLite (`VOXBRIDGE_DB=bookings.db`) — survives restart
 - [x] Per-stage latency (`ms`) on every trace entry + an end-to-end `total_ms`, shown in the console

@@ -34,3 +34,21 @@ class SqliteBookingStore:
     def all(self) -> dict[str, dict]:
         rows = self._db.execute("SELECT ref, data FROM bookings").fetchall()
         return {ref: json.loads(data) for ref, data in rows}
+
+    def update(self, ref: str, changes: dict[str, str]) -> dict | None:
+        b = self.get(ref)
+        if b is None:
+            return None
+        b.update({k: v for k, v in changes.items() if v is not None})
+        self._db.execute("UPDATE bookings SET data = ? WHERE ref = ?", (json.dumps(b), ref))
+        self._db.commit()
+        return b
+
+    def cancel(self, ref: str) -> bool:
+        b = self.get(ref)
+        if b is None:
+            return False
+        b["status"] = "cancelled"
+        self._db.execute("UPDATE bookings SET data = ? WHERE ref = ?", (json.dumps(b), ref))
+        self._db.commit()
+        return True

@@ -23,3 +23,19 @@ class BookingStore:
 
     def all(self) -> dict[str, dict]:
         return dict(self._bookings)
+
+    def update(self, ref: str, changes: dict[str, str]) -> dict | None:
+        """Merge non-empty changes into an existing booking; None if not found."""
+        b = self._bookings.get(ref)
+        if b is None:
+            return None
+        b.update({k: v for k, v in changes.items() if v is not None})
+        return dict(b)
+
+    def cancel(self, ref: str) -> bool:
+        """Mark a booking cancelled (kept, not deleted); False if not found."""
+        b = self._bookings.get(ref)
+        if b is None:
+            return False
+        b["status"] = "cancelled"
+        return True
