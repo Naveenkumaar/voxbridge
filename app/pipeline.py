@@ -96,4 +96,7 @@ class VoicePipeline:
             else:
                 final_text = tr.text
         result, new_state = self.run_turn(final_text, state)
+        # stream the reply out in chunks so a client can start speaking sooner
+        for speech in self.tts.synthesize_stream(result.reply):
+            yield {"type": "reply_chunk", "text": speech.text}
         yield {"type": "final", "result": result, "state": new_state, "early": early}

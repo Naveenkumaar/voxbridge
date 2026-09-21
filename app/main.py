@@ -64,6 +64,8 @@ def turn_stream(req: TurnRequest) -> StreamingResponse:
         for ev in pipeline.run_turn_stream(req.text, state):
             if ev["type"] == "partial":
                 payload = {"type": "partial", "text": ev["text"], "intent": ev["intent"]}
+            elif ev["type"] == "reply_chunk":
+                payload = {"type": "reply_chunk", "text": ev["text"]}
             else:
                 r = ev["result"]
                 final_state = ev["state"]
