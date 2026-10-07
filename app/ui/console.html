@@ -36,8 +36,9 @@
       <input id="msg" placeholder="Try: 'Hi, I'd like to book a table for 4 tomorrow at 7pm, name's Naveen'" autofocus />
       <button id="send">Send</button>
     </div>
-    <div class="meta"><span class="toggle" id="t">show pipeline trace</span> · session resets after each booking</div>
+    <div class="meta"><span class="toggle" id="t">show pipeline trace</span> · <span class="toggle" id="tt">show live timeline</span> · session resets after each booking</div>
     <div class="trace" id="trace"></div>
+    <div class="trace" id="timeline"></div>
   </main>
 <script>
 const sid = 'web-' + Math.floor(Date.now() / 1000);
@@ -77,6 +78,23 @@ document.getElementById('t').onclick = () => {
   const t = document.getElementById('trace');
   t.style.display = t.style.display === 'block' ? 'none' : 'block';
 };
+// live cross-turn timeline from the normalized event feed
+async function loadTimeline() {
+  try {
+    const { runs } = await (await fetch('/events/runs?limit=8')).json();
+    const el = document.getElementById('timeline');
+    el.textContent = runs.map(r => {
+      const stages = r.events.filter(e => e.type === 'run.stage')
+        .map(e => `${e.stage}:${(e.detail && e.detail.ms != null ? e.detail.ms : '?')}ms`).join('  ');
+      return `${r.run_id.slice(0,8)} [${r.status.replace('run.','')}]  ${stages}`;
+    }).join('\n') || 'No turns yet.';
+  } catch (e) { /* best-effort */ }
+}
+document.getElementById('tt').onclick = () => {
+  const t = document.getElementById('timeline');
+  t.style.display = t.style.display === 'block' ? 'none' : 'block';
+};
+setInterval(loadTimeline, 2000); loadTimeline();
 fetch('/health').then(r => r.json()).then(h =>
   document.getElementById('backend').textContent = `stt:${h.stt} · tts:${h.tts}`);
 </script>

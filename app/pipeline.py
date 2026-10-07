@@ -12,11 +12,13 @@ are offline stubs, so the whole cascade runs with no models and no network.
 from __future__ import annotations
 
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.dialogue.manager import DialogueManager, DialogueState
 from app.dialogue.nlu_router import detect_intent
+from app.events import EventType, bus
 from app.stt import get_stt
 from app.tts import get_tts
 
@@ -34,6 +36,7 @@ class TurnResult:
     trace: list[dict[str, Any]] = field(default_factory=list)
     total_ms: float = 0.0
     receipt: dict | None = None
+    run_id: str | None = None
 
 
 class VoicePipeline:
@@ -45,11 +48,15 @@ class VoicePipeline:
     def run_turn(self, audio_or_text, state: DialogueState | None = None) -> tuple[TurnResult, DialogueState]:
         trace: list[dict[str, Any]] = []
         last = [time.perf_counter()]   # per-stage timer; ms = time since previous stage
+        run_id = uuid.uuid4().hex[:12]
+        bus.emit(run_id, EventType.RUN_STARTED)
 
         def timed(stage: str, **detail: Any) -> None:
             now = time.perf_counter()
-            trace.append({"stage": stage, "ms": round((now - last[0]) * 1000, 2), **detail})
+            ms = round((now - last[0]) * 1000, 2)
+            trace.append({"stage": stage, "ms": ms, **detail})
             last[0] = now
+            bus.emit(run_id, EventType.STAGE, stage=stage, ms=ms, **detail)
 
         # 1. STT
         transcript = self.stt.transcribe(audio_or_text)
@@ -74,6 +81,9 @@ class VoicePipeline:
             total_ms=round(sum(s["ms"] for s in trace), 2),
             receipt=reply.state.receipt,
         )
+        bus.emit(run_id, EventType.RUN_COMPLETED, stage=result.stage,
+                 total_ms=result.total_ms)
+        result.run_id = run_id
         return result, reply.state
 
     def run_turn_stream(self, audio_or_text, state: DialogueState | None = None):

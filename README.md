@@ -94,6 +94,15 @@ curl -s localhost:8090/v1/turns -H 'content-type: application/json' \
 Every turn returns a `trace` with all three stages, so latency and decisions are
 visible end to end (toggle "show pipeline trace" in the console).
 
+Each turn also emits a **normalized event stream** ([`app/events.py`](app/events.py)) —
+`run.started` → one `run.stage` per stage (stt → dialogue → tts) → `run.completed`:
+
+- `GET /events?since_seq=<n>` — poll the raw feed (stream only what's new).
+- `GET /events/runs` — turns grouped with per-stage latency (newest first).
+- The console's "show live timeline" renders it across turns.
+
+The bus is in-process, bounded, and best-effort, so it never slows a turn.
+
 ---
 
 ## The dialogue model

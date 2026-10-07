@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.booking import get_booking_store
 from app.dialogue.manager import DialogueManager
+from app.events import bus
 from app.pipeline import VoicePipeline
 from app.state import SessionStore
 
@@ -51,7 +52,20 @@ def turn(req: TurnRequest) -> dict:
         "trace": result.trace,
         "total_ms": result.total_ms,
         "receipt": result.receipt,
+        "run_id": result.run_id,
     }
+
+
+@app.get("/events")
+def events(limit: int = 200, since_seq: int = 0) -> dict:
+    """Recent normalized turn events (ascending). Poll with the last `seq` you saw."""
+    return {"events": bus.recent(limit=max(1, min(limit, 2000)), since_seq=since_seq)}
+
+
+@app.get("/events/runs")
+def event_runs(limit: int = 25) -> dict:
+    """Recent turns grouped for the live timeline (newest first)."""
+    return {"runs": bus.runs(limit=max(1, min(limit, 100)))}
 
 
 @app.post("/v1/turns/stream")
