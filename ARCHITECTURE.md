@@ -73,6 +73,24 @@ call stays coherent; the API resets it once a booking is `done` or `cancelled`.
 
 ---
 
+## Observability — the normalized event stream
+
+Alongside the per-turn `trace`, every turn emits a **normalized event stream** to a
+process-wide bus ([`app/events.py`](app/events.py)):
+
+- `run.started` once, `run.stage` per cascade stage (stt → dialogue → tts), then
+  `run.completed` / `run.failed`.
+- `EventBus` is a bounded ring buffer plus best-effort subscriber fan-out — emission
+  never slows or breaks a turn.
+- Wired inside `run_turn`: it mints a `run_id`, emits `run.started`, the existing
+  `timed()` stage helper also emits each `run.stage` (carrying the stage latency), and a
+  terminal event is emitted before returning; the `run_id` is attached to the `TurnResult`.
+- Exposed as `GET /events?since_seq=<n>` (stream only what's new) and `GET /events/runs`
+  (grouped per turn with per-stage latency, newest first). The console's "show live
+  timeline" polls `/events/runs`. Safe execution metadata only — never model reasoning.
+
+---
+
 ## The dialogue policy
 
 A deterministic slot-filling state machine
