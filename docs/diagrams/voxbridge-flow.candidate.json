@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "voxbridge — One turn (sequence)",
+    "subtitle": "One voice turn as calls between the parts, top to bottom: STT -> dialogue -> TTS. Click any box to see the code.",
+    "output": "voxbridge-flow.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Naveenkumaar/voxbridge.git",
+      "revision": "fd993eb62db685f6ee7a707ff443d4a6f3948a1f",
+      "link_mode": "local-only"
+    },
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "default": {
+          "label": "a normal call"
+        },
+        "emphasis": {
+          "label": "the main path"
+        },
+        "return": {
+          "label": "a response coming back"
+        },
+        "dashed": {
+          "label": "optional / background"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "voice/text"
+    },
+    {
+      "id": "pipe",
+      "type": "backend",
+      "label": "Pipeline",
+      "sublabel": "run_turn",
+      "sources": [
+        {
+          "path": "app/pipeline.py",
+          "line": 48,
+          "label": "run_turn"
+        }
+      ]
+    },
+    {
+      "id": "stt",
+      "type": "backend",
+      "label": "STT",
+      "sublabel": "transcribe",
+      "sources": [
+        {
+          "path": "app/stt/base.py",
+          "line": 14,
+          "label": "transcribe"
+        }
+      ]
+    },
+    {
+      "id": "dlg",
+      "type": "backend",
+      "label": "Dialogue",
+      "sublabel": "slot filling",
+      "sources": [
+        {
+          "path": "app/dialogue/manager.py",
+          "line": 59,
+          "label": "handle"
+        }
+      ]
+    },
+    {
+      "id": "nlu",
+      "type": "backend",
+      "label": "NLU",
+      "sublabel": "intent+slots",
+      "sources": [
+        {
+          "path": "app/dialogue/nlu.py",
+          "line": 68,
+          "label": "NLU"
+        }
+      ]
+    },
+    {
+      "id": "book",
+      "type": "backend",
+      "label": "Booking",
+      "sublabel": "store",
+      "sources": [
+        {
+          "path": "app/booking/store.py",
+          "line": 10,
+          "label": "BookingStore"
+        }
+      ]
+    },
+    {
+      "id": "tts",
+      "type": "backend",
+      "label": "TTS",
+      "sublabel": "synthesize",
+      "sources": [
+        {
+          "path": "app/tts/base.py",
+          "line": 14,
+          "label": "synthesize"
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "caller",
+      "to": "pipe",
+      "y": 160,
+      "label": "audio / text",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "pipe",
+      "to": "stt",
+      "y": 212,
+      "label": "transcribe"
+    },
+    {
+      "id": "m3",
+      "from": "stt",
+      "to": "pipe",
+      "y": 264,
+      "label": "transcript",
+      "variant": "return"
+    },
+    {
+      "id": "m4",
+      "from": "pipe",
+      "to": "dlg",
+      "y": 316,
+      "label": "handle(text)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m5",
+      "from": "dlg",
+      "to": "nlu",
+      "y": 368,
+      "label": "intent + slots"
+    },
+    {
+      "id": "m6",
+      "from": "dlg",
+      "to": "book",
+      "y": 420,
+      "label": "book / lookup"
+    },
+    {
+      "id": "m7",
+      "from": "dlg",
+      "to": "pipe",
+      "y": 472,
+      "label": "reply + next state",
+      "variant": "return"
+    },
+    {
+      "id": "m8",
+      "from": "pipe",
+      "to": "tts",
+      "y": 524,
+      "label": "synthesize"
+    },
+    {
+      "id": "m9",
+      "from": "tts",
+      "to": "pipe",
+      "y": 576,
+      "label": "audio",
+      "variant": "return"
+    },
+    {
+      "id": "m10",
+      "from": "pipe",
+      "to": "caller",
+      "y": 628,
+      "label": "spoken reply",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "How to read this diagram",
+      "items": [
+        "A sequence: time flows top to bottom. Each column is a part; each arrow is a call or a reply.",
+        "It follows ONE turn end to end. A returning arrow is a response coming back.",
+        "Click a column's SRC badge to see the exact code."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Glossary (plain words)",
+      "items": [
+        "Turn - one caller utterance and the agent's spoken reply.",
+        "Slot filling - collecting the fields a booking needs (date, time, party size, name).",
+        "NLU - natural-language understanding: extract the intent and the slots from the text.",
+        "Barge-in - the caller interrupts while the agent is speaking, so it stops and listens."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Guided tour - one turn",
+      "items": [
+        "1. The caller sends voice or text.",
+        "2. The pipeline transcribes it (STT).",
+        "3. The dialogue manager fills slots via NLU and the booking store, and decides the reply.",
+        "4. TTS speaks the reply back to the caller."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Why it is shaped this way",
+      "items": [
+        "The three stages are swappable and separately testable; stubs run with no models or network.",
+        "The dialogue manager owns booking state, so the model is never trusted to track it.",
+        "Returns are explicit so latency of each stage is visible in the trace."
+      ]
+    }
+  ]
+}

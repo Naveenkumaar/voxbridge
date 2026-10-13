@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "voxbridge — Architecture",
+    "subtitle": "A cascaded voice agent: speech-to-text -> dialogue -> text-to-speech, each part pluggable. New here? Read the cards.",
+    "output": "voxbridge-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Naveenkumaar/voxbridge.git",
+      "revision": "fd993eb62db685f6ee7a707ff443d4a6f3948a1f",
+      "link_mode": "local-only"
+    },
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "frontend": {
+          "label": "Frontend: a screen a person uses"
+        },
+        "backend": {
+          "label": "Backend: service code doing the work"
+        },
+        "database": {
+          "label": "Datastore: where information is saved"
+        },
+        "external": {
+          "label": "External: a person or third-party model"
+        }
+      }
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [
+      40,
+      40
+    ],
+    "cols": 5,
+    "gapX": 74,
+    "gapY": 66,
+    "cellW": 140,
+    "cellH": 60
+  },
+  "components": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "voice or text",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "console",
+      "type": "frontend",
+      "label": "Console",
+      "sublabel": "single-file HTML",
+      "row": 0,
+      "col": 1,
+      "sources": [
+        {
+          "path": "app/ui/console.html",
+          "line": 1,
+          "label": "console UI"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI app",
+      "sublabel": "turns + events",
+      "row": 0,
+      "col": 2,
+      "sources": [
+        {
+          "path": "app/main.py",
+          "line": 22,
+          "label": "app = FastAPI"
+        }
+      ]
+    },
+    {
+      "id": "pipeline",
+      "type": "backend",
+      "label": "Voice pipeline",
+      "sublabel": "stt->dialogue->tts",
+      "row": 1,
+      "col": 2,
+      "sources": [
+        {
+          "path": "app/pipeline.py",
+          "line": 42,
+          "label": "VoicePipeline"
+        }
+      ]
+    },
+    {
+      "id": "stt",
+      "type": "backend",
+      "label": "STT",
+      "sublabel": "speech to text",
+      "row": 1,
+      "col": 1,
+      "sources": [
+        {
+          "path": "app/stt/base.py",
+          "line": 14,
+          "label": "STT.transcribe"
+        }
+      ]
+    },
+    {
+      "id": "tts",
+      "type": "backend",
+      "label": "TTS",
+      "sublabel": "text to speech",
+      "row": 1,
+      "col": 3,
+      "sources": [
+        {
+          "path": "app/tts/base.py",
+          "line": 14,
+          "label": "TTS.synthesize"
+        }
+      ]
+    },
+    {
+      "id": "dialogue",
+      "type": "backend",
+      "label": "Dialogue manager",
+      "sublabel": "slot filling",
+      "row": 2,
+      "col": 2,
+      "sources": [
+        {
+          "path": "app/dialogue/manager.py",
+          "line": 59,
+          "label": "DialogueManager.handle"
+        }
+      ]
+    },
+    {
+      "id": "nlu",
+      "type": "backend",
+      "label": "NLU",
+      "sublabel": "intent + slots",
+      "row": 2,
+      "col": 1,
+      "sources": [
+        {
+          "path": "app/dialogue/nlu.py",
+          "line": 68,
+          "label": "NLU"
+        },
+        {
+          "path": "app/dialogue/nlu_router.py",
+          "line": 29,
+          "label": "detect_intent"
+        }
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "LLM NLU",
+      "sublabel": "optional backend",
+      "row": 2,
+      "col": 3,
+      "sources": [
+        {
+          "path": "app/dialogue/llm_nlu.py",
+          "line": 1,
+          "label": "LLM NLU"
+        }
+      ]
+    },
+    {
+      "id": "booking",
+      "type": "database",
+      "label": "Booking store",
+      "sublabel": "SQLite or memory",
+      "row": 3,
+      "col": 1,
+      "sources": [
+        {
+          "path": "app/booking/store.py",
+          "line": 10,
+          "label": "BookingStore"
+        }
+      ]
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "Sessions",
+      "sublabel": "per-call state",
+      "row": 3,
+      "col": 2,
+      "sources": [
+        {
+          "path": "app/state/sessions.py",
+          "line": 7,
+          "label": "SessionStore"
+        }
+      ]
+    },
+    {
+      "id": "barge",
+      "type": "backend",
+      "label": "Barge-in",
+      "sublabel": "interrupt handling",
+      "row": 3,
+      "col": 3,
+      "sources": [
+        {
+          "path": "app/audio/barge.py",
+          "line": 14,
+          "label": "barge-in"
+        }
+      ]
+    },
+    {
+      "id": "events",
+      "type": "backend",
+      "label": "Event bus",
+      "sublabel": "live timeline",
+      "row": 3,
+      "col": 0,
+      "sources": [
+        {
+          "path": "app/events.py",
+          "line": 45,
+          "label": "EventBus"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "e-call",
+      "from": "caller",
+      "to": "api",
+      "label": "audio/text",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-con",
+      "from": "console",
+      "to": "api",
+      "label": "HTTP"
+    },
+    {
+      "id": "e-run",
+      "from": "api",
+      "to": "pipeline",
+      "label": "run turn",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-stt",
+      "from": "pipeline",
+      "to": "stt",
+      "label": "transcribe"
+    },
+    {
+      "id": "e-dlg",
+      "from": "pipeline",
+      "to": "dialogue",
+      "label": "handle",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-tts",
+      "from": "pipeline",
+      "to": "tts",
+      "label": "synthesize"
+    },
+    {
+      "id": "e-nlu",
+      "from": "dialogue",
+      "to": "nlu",
+      "label": "intent+slots"
+    },
+    {
+      "id": "e-llm",
+      "from": "nlu",
+      "to": "llm",
+      "label": "optional",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-book",
+      "from": "dialogue",
+      "to": "booking",
+      "label": "book/lookup"
+    },
+    {
+      "id": "e-state",
+      "from": "pipeline",
+      "to": "state",
+      "label": "session",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-barge",
+      "from": "stt",
+      "to": "barge",
+      "label": "interrupt",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-ev",
+      "from": "pipeline",
+      "to": "events",
+      "label": "emit",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "How to read this diagram",
+      "items": [
+        "Each box is a part of the system; colour = what kind (see the legend top-right).",
+        "An arrow means 'talks to'; dashed = background/optional. Click a box's SRC badge to see the code."
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Complete code map (every module)",
+      "items": [
+        "app/pipeline.py - the cascade that ties STT, the dialogue manager and TTS together.",
+        "app/stt/ - speech-to-text engines (a stub and a Whisper backend) behind one interface.",
+        "app/tts/ - text-to-speech engines (a stub and pyttsx3) behind one interface.",
+        "app/dialogue/ - the dialogue manager (slot filling), NLU (intent + slots) and an optional LLM NLU.",
+        "app/booking/ - the booking store (SQLite or in-memory) behind one interface.",
+        "app/audio/ - microphone input and barge-in (interrupt) handling.",
+        "app/state/ - per-call session state.",
+        "app/events.py - the normalized event bus behind the live timeline.",
+        "app/main.py - the FastAPI app: turn endpoints + the browser console."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Guided tour - one turn",
+      "items": [
+        "1. A caller sends voice or text to the FastAPI app (or uses the console).",
+        "2. The pipeline runs STT to get a transcript.",
+        "3. The dialogue manager fills slots using NLU (optionally an LLM) and the booking store.",
+        "4. TTS speaks the reply; session state is kept per call; events feed the live timeline."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Why it is built this way",
+      "items": [
+        "Cascaded STT->LLM/NLU->TTS: each stage is swappable and separately testable (stubs run with no models).",
+        "The dialogue manager owns slot filling, so the model is not trusted to track booking state.",
+        "Barge-in lets a caller interrupt, so the agent stops speaking and listens."
+      ]
+    }
+  ]
+}
